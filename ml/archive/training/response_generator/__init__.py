@@ -1,0 +1,1 @@
+"""Legacy response generator scripts."""

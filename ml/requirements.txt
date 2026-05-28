@@ -1,0 +1,7 @@
+numpy>=1.24,<2
+fastapi>=0.111
+google-genai>=1.72
+uvicorn>=0.30
+pydantic>=2.7
+tensorflow>=2.13
+transformers>=4.40

@@ -1,0 +1,54 @@
+# Global environment files
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node artifacts
+node_modules/
+server/node_modules/
+server/dist/
+.next/
+*.tsbuildinfo
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Notebooks and OS files
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+
+# Local ML artifacts and datasets
+ml/data/
+ml/saved_models/
+*.h5
+*.keras
+*.npy
+*.pkl
+*.db
+*.vec

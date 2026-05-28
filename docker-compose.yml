@@ -1,0 +1,97 @@
+services:
+  db:
+    image: postgres:16
+    container_name: noora-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: Noora
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ADMIN12345
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - noora-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d Noora"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+
+    container_name: noora-backend
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy
+      ml:
+        condition: service_started
+
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://admin:ADMIN12345@db:5432/Noora
+      JWT_SECRET: AINOX_NOORA_AI_CONVERSATIONAL_EMOTION_AWARE_DEPLOYED_2026
+
+      NOORA_ML_BASE_URL: http://ml:8000
+      NOORA_ML_RUN_APP_PATH: /run_app
+      NOORA_TIMEOUT_MS: 90000
+      NOORA_HISTORY_LIMIT: 20
+
+      CORS_ORIGIN: http://localhost:3000
+
+    ports:
+      - "4000:4000"
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+
+    container_name: noora-ml
+    restart: unless-stopped
+    gpus: all
+    env_file:
+      - ./ml/.env
+
+    environment:
+      NOORA_API_HOST: 0.0.0.0
+      NOORA_API_PORT: 8000
+      NOORA_CLASSIFIER_MODEL_PATH: /app/saved_models/Noora_v7.keras
+      NOORA_COMPLEX_EMOTIONS_PATH: /app/data/complex_emotions.pkl
+      NOORA_EMBEDDING_MODEL: bhadresh-savani/bert-base-go-emotion
+      GEMINI_MODEL_NAME: ${GEMINI_MODEL_NAME:-gemini-2.0-flash}
+      NOORA_DEVICE: cuda
+      NOORA_MAX_LEN: 150
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+
+    ports:
+      - "8000:8000"
+
+  adminer:
+    image: adminer:standalone
+    container_name: noora-adminer
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula
+
+    ports:
+      - "8080:8080"
+
+volumes:
+  noora-postgres-data:
