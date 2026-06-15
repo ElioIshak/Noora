@@ -2,6 +2,8 @@
 
 Noora is a full-stack, emotion-aware chat application. It combines a Next.js frontend, a TypeScript Express API, PostgreSQL persistence, and a Python FastAPI ML service for emotion classification and Gemini-powered response generation.
 
+![Front Page](FrontPage.png)
+
 ## Overview
 
 Noora is built around a simple flow:
