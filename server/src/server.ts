@@ -34,7 +34,7 @@ async function startServer() {
     startWeeklyNotificationScheduler();
 
     // eslint-disable-next-line no-console
-    console.log(`Server is running on port ${config.port} at http://localhost:${config.port}`);
+    console.log(`Server is running on port ${config.port} at ${config.appUrl}`);
   });
 }
 

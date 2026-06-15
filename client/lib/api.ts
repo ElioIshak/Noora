@@ -338,12 +338,12 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+  const url = `${API_BASE}/api${endpoint}`;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
-  };
+  }; 
 
   const token = getAuthToken();
   if (token) {
