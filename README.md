@@ -204,7 +204,7 @@ Database:  Noora
 ```bash
 cd ml
 pip install -r requirements.txt
-python -m noora
+python -m noora.api
 ```
 
 If Python cannot find the `noora` package, set `PYTHONPATH` to `ml/src`.
@@ -214,7 +214,7 @@ PowerShell:
 ```powershell
 cd ml
 $env:PYTHONPATH = "$PWD\src"
-python -m noora
+python -m noora.api
 ```
 
 ### Server
