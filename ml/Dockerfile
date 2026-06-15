@@ -25,7 +25,6 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 
 # Copy app files
 COPY src ./src
-COPY data ./data
 COPY saved_models ./saved_models
 
 # Install remaining dependencies
