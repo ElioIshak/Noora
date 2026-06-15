@@ -48,7 +48,6 @@ ml/data/
 ml/hidden_models/
 ml/archive/
 *.h5
-*.keras
 *.npy
 *.pkl
 *.db
