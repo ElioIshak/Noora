@@ -46,6 +46,7 @@ Thumbs.db
 # Local ML artifacts and datasets
 ml/data/
 ml/saved_models/
+ml/archive/
 *.h5
 *.keras
 *.npy

@@ -5,7 +5,7 @@ import { Resend } from "resend";
 import { getConfig } from "../config";
 import { db } from "../db/db";
 
-import { toPublicUser, type PublicUser } from "./auth.service";
+import type { PublicUser } from "./auth.service";
 
 const config = getConfig();
 const resend = config.resendApiKey ? new Resend(config.resendApiKey) : null;
@@ -19,6 +19,10 @@ type EmailResult = {
   sent: boolean;
   resendEmailId?: string;
   skippedReason?: string;
+};
+
+type SendEmailOptions = {
+  requireNotificationOptIn?: boolean;
 };
 
 type WeeklyPeriod = {
@@ -47,6 +51,27 @@ const fallbackSummary: WeeklySummary = {
   reflectionPrompt: "What is one feeling your body has been asking you to listen to this week?"
 };
 
+function toEmailUser(user: {
+  id: number | string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  user_name: string;
+  created_at: Date | string;
+}): PublicUser {
+  const firstName = String(user.first_name ?? "").trim();
+  const lastName = String(user.last_name ?? "").trim();
+  const fallbackName = String(user.user_name ?? "").replace(/_/g, " ").trim();
+  const name = `${firstName} ${lastName}`.trim() || fallbackName || "User";
+
+  return {
+    id: Number(user.id),
+    email: String(user.email),
+    name,
+    createdAt: new Date(user.created_at).toISOString()
+  };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -64,7 +89,7 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
-function buildEmailHtml(title: string, body: string): string {
+function buildEmailHtml(title: string, body: string, footer?: string): string {
   return [
     "<!doctype html>",
     '<html lang="en">',
@@ -73,7 +98,7 @@ function buildEmailHtml(title: string, body: string): string {
     '<section style="background:#ffffff;border:1px solid #e6e9f0;border-radius:8px;padding:28px;">',
     `<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">${escapeHtml(title)}</h1>`,
     body,
-    '<p style="margin:28px 0 0;color:#697386;font-size:13px;line-height:1.5;">You are receiving this because email notifications are enabled in your Noora account.</p>',
+    footer ? `<p style="margin:28px 0 0;color:#697386;font-size:13px;line-height:1.5;">${escapeHtml(footer)}</p>` : "",
     "</section>",
     "</main>",
     "</body>",
@@ -81,8 +106,14 @@ function buildEmailHtml(title: string, body: string): string {
   ].join("");
 }
 
-async function sendEmail(to: string, subject: string, text: string, html: string): Promise<EmailResult> {
-  if (!config.emailNotificationsEnabled) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  options: SendEmailOptions = {}
+): Promise<EmailResult> {
+  if (options.requireNotificationOptIn !== false && !config.emailNotificationsEnabled) {
     return { sent: false, skippedReason: "Email notifications are disabled." };
   }
 
@@ -122,7 +153,7 @@ export async function sendWelcomeEmail(user: PublicUser): Promise<EmailResult> {
     `<p style="font-size:16px;line-height:1.6;">Hi ${escapeHtml(name)},</p>`,
     '<p style="font-size:16px;line-height:1.6;">Your account is ready, and your space is here whenever you want to check in.</p>',
     `<p style="margin:24px 0 0;"><a href="${escapeHtml(config.appUrl)}" style="display:inline-block;background:#18202f;color:#ffffff;text-decoration:none;border-radius:6px;padding:12px 18px;">Open Noora</a></p>`
-  ].join(""));
+  ].join(""), "You are receiving this because email notifications are enabled in your Noora account.");
 
   return sendEmail(user.email, subject, text, html);
 }
@@ -143,9 +174,35 @@ export async function sendSignInEmail(user: PublicUser): Promise<EmailResult> {
     '<p style="font-size:16px;line-height:1.6;">Your Noora account was just signed in.</p>',
     '<p style="font-size:16px;line-height:1.6;">If this was you, no action is needed. If this was not you, reset your password as soon as possible.</p>',
     `<p style="margin:24px 0 0;"><a href="${escapeHtml(config.appUrl)}" style="display:inline-block;background:#18202f;color:#ffffff;text-decoration:none;border-radius:6px;padding:12px 18px;">Open Noora</a></p>`
-  ].join(""));
+  ].join(""), "You are receiving this because email notifications are enabled in your Noora account.");
 
   return sendEmail(user.email, subject, text, html);
+}
+
+export async function sendPasswordResetEmail(user: PublicUser, resetToken: string, expiresAt: Date): Promise<EmailResult> {
+  const name = user.name || "there";
+  const subject = "Reset your Noora password";
+  const resetUrl = `${config.appUrl}/auth/forgot-password`;
+  const expiresText = formatDate(expiresAt);
+  const text = [
+    `Hi ${name},`,
+    "",
+    "Use this reset token to set a new Noora password:",
+    resetToken,
+    "",
+    `Reset password: ${resetUrl}`,
+    "",
+    `This token expires on ${expiresText}. If you did not request this, you can ignore this email.`
+  ].join("\n");
+  const html = buildEmailHtml(subject, [
+    `<p style="font-size:16px;line-height:1.6;">Hi ${escapeHtml(name)},</p>`,
+    '<p style="font-size:16px;line-height:1.6;">Use this reset token to set a new Noora password:</p>',
+    `<p style="font-size:18px;line-height:1.6;font-family:monospace;background:#f6f7fb;border:1px solid #e6e9f0;border-radius:6px;padding:12px;word-break:break-all;">${escapeHtml(resetToken)}</p>`,
+    `<p style="margin:24px 0 0;"><a href="${escapeHtml(resetUrl)}" style="display:inline-block;background:#18202f;color:#ffffff;text-decoration:none;border-radius:6px;padding:12px 18px;">Reset password</a></p>`,
+    `<p style="font-size:14px;line-height:1.6;color:#697386;">This token expires on ${escapeHtml(expiresText)}. If you did not request this, you can ignore this email.</p>`
+  ].join(""), "You are receiving this account-security email because a password reset was requested for your Noora account.");
+
+  return sendEmail(user.email, subject, text, html, { requireNotificationOptIn: false });
 }
 
 function getPreviousWeekPeriod(now = new Date()): WeeklyPeriod {
@@ -271,7 +328,7 @@ async function sendWeeklyCheckupEmail(user: PublicUser): Promise<EmailResult> {
     '<p style="font-size:16px;line-height:1.6;">A gentle weekly check-in: how have you been feeling lately?</p>',
     '<p style="font-size:16px;line-height:1.6;">If you have a few minutes, Noora is ready to help you reflect on what has been heavy, hopeful, or simply present.</p>',
     `<p style="margin:24px 0 0;"><a href="${escapeHtml(config.appUrl)}" style="display:inline-block;background:#18202f;color:#ffffff;text-decoration:none;border-radius:6px;padding:12px 18px;">Check in</a></p>`
-  ].join(""));
+  ].join(""), "You are receiving this because email notifications are enabled in your Noora account.");
 
   return sendEmail(user.email, subject, text, html);
 }
@@ -378,7 +435,7 @@ async function sendWeeklyEmotionSummaryEmail(user: PublicUser, userId: number, p
     '<h2 style="font-size:18px;margin:24px 0 8px;">A question for the week</h2>',
     `<p style="font-size:16px;line-height:1.6;">${escapeHtml(summary.reflectionPrompt)}</p>`,
     '<p style="font-size:14px;line-height:1.6;color:#697386;">This is a reflection aid, not a clinical assessment.</p>'
-  ].join(""));
+  ].join(""), "You are receiving this because email notifications are enabled in your Noora account.");
 
   return sendEmail(user.email, summary.subjectLine, text, html);
 }
@@ -395,7 +452,7 @@ async function getEligibleWeeklyUsers() {
 
 async function sendWeeklyEmailsForUser(userRow: Awaited<ReturnType<typeof getEligibleWeeklyUsers>>[number], period: WeeklyPeriod) {
   const userId = Number(userRow.id);
-  const user = toPublicUser(userRow);
+  const user = toEmailUser(userRow);
 
   if (!(await hasEmailLog(userId, EMAIL_TYPES.weeklyCheckup, period))) {
     const result = await sendWeeklyCheckupEmail(user);

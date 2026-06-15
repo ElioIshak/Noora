@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Header, Footer } from '@/components/layout/header-footer'
+import { Header } from '@/components/layout/header-footer'
 import { PageTransition } from '@/components/animated-section'
 import { Eye, EyeOff, Loader2, ArrowRight, Check } from 'lucide-react'
 import { authAPI, setAuthToken } from '@/lib/api'
@@ -189,7 +189,6 @@ export default function SignupPage() {
         </PageTransition>
       </main>
       
-      <Footer />
     </div>
   )
 }

@@ -405,6 +405,8 @@ export default function ChatPage() {
   const [isDeletingConversationId, setIsDeletingConversationId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const loadRequestIdRef = useRef(0)
+  const deletedConversationIdsRef = useRef(new Set<string>())
 
   const handleAuthFailure = useCallback(() => {
     clearAuthToken()
@@ -430,11 +432,18 @@ export default function ChatPage() {
 
   const loadConversation = useCallback(
     async (conversationId: string) => {
+      const requestId = loadRequestIdRef.current + 1
+      loadRequestIdRef.current = requestId
+
       setIsLoadingMessages(true)
       setError('')
 
       try {
         const result = await chatAPI.getConversation(conversationId)
+        if (requestId !== loadRequestIdRef.current || deletedConversationIdsRef.current.has(conversationId)) {
+          return
+        }
+
         setMessages(result.messages)
 
         setConversations((previous) =>
@@ -449,9 +458,15 @@ export default function ChatPage() {
           )
         )
       } catch (requestError) {
+        if (requestId !== loadRequestIdRef.current || deletedConversationIdsRef.current.has(conversationId)) {
+          return
+        }
+
         setError(handleRequestError(requestError, 'Failed to load conversation.'))
       } finally {
-        setIsLoadingMessages(false)
+        if (requestId === loadRequestIdRef.current) {
+          setIsLoadingMessages(false)
+        }
       }
     },
     [handleRequestError]
@@ -494,6 +509,10 @@ export default function ChatPage() {
   }, [handleRequestError, loadConversation, router])
 
   const handleSelectConversation = async (conversationId: string) => {
+    if (isDeletingConversationId || deletedConversationIdsRef.current.has(conversationId)) {
+      return
+    }
+
     setActiveConversationId(conversationId)
     await loadConversation(conversationId)
   }
@@ -520,6 +539,7 @@ export default function ChatPage() {
     }
 
     setIsDeletingConversationId(conversationId)
+    deletedConversationIdsRef.current.add(conversationId)
     setError('')
 
     try {
@@ -538,6 +558,7 @@ export default function ChatPage() {
         }
       }
     } catch (requestError) {
+      deletedConversationIdsRef.current.delete(conversationId)
       setError(handleRequestError(requestError, 'Failed to delete conversation.'))
     } finally {
       setIsDeletingConversationId(null)

@@ -281,7 +281,7 @@ export async function chat(userId: number, message: string, conversationId?: num
   const conversationHistory = buildConversationHistory(historyMessages);
 
   const ai = await generateAIResponse(message, userId, conversationHistory);
-  const normalizedEmotion = Array.isArray(ai.emotion) ? ai.emotion.join(", ") : ai.emotion;
+  const normalizedEmotion = ai.emotion.join(", ");
 
   await saveMessage(activeConversationId, "noora", ai.response, normalizedEmotion || undefined);
 

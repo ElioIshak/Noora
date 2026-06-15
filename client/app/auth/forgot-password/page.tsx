@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Header, Footer } from '@/components/layout/header-footer'
 import { PageTransition } from '@/components/animated-section'
 import { ArrowLeft, Check, Copy, Loader2, RotateCcw } from 'lucide-react'
 import { authAPI } from '@/lib/api'
@@ -48,10 +47,6 @@ export default function ForgotPasswordPage() {
     try {
       const result = await authAPI.forgotPassword(email)
       setRequestMessage(result.message)
-
-      if (result.resetToken) {
-        setResetToken(result.resetToken)
-      }
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : 'Failed to request password reset.')
     } finally {
@@ -112,7 +107,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen bg-gradient-hero relative noise-overlay flex flex-col">
-      <Header />
 
       <main className="flex-grow flex items-center justify-center px-4 py-32">
         <PageTransition className="w-full max-w-lg space-y-6">
@@ -263,7 +257,6 @@ export default function ForgotPasswordPage() {
         </PageTransition>
       </main>
 
-      <Footer />
     </div>
   )
 }

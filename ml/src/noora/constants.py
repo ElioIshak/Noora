@@ -40,6 +40,8 @@ EMOTION_LABELS = [
 ]
 
 DEFAULT_TOP_K = 3
+MAX_LEN = 150
+EMBEDDING_MODEL_NAME = "SamLowe/roberta-base-go_emotions"
 
 
 # Resolve the ML project root folder.
@@ -76,7 +78,7 @@ def get_settings() -> Settings:
     return Settings(
         classifier_model_path=classifier_model_path,
         complex_emotions_path=complex_emotions_path,
-        embedding_model_name=os.getenv("NOORA_EMBEDDING_MODEL", "bhadresh-savani/bert-base-go-emotion"),
+        embedding_model_name=os.getenv("NOORA_EMBEDDING_MODEL", "SamLowe/roberta-base-go_emotions"),
         ollama_model_name=os.getenv("NOORA_OLLAMA_MODEL", "Noora"),
         ollama_host=os.getenv("NOORA_OLLAMA_HOST"),
         device_preference=os.getenv("NOORA_DEVICE", "auto").lower(),

@@ -1,6 +1,37 @@
 // Client for sending requests to the Python ML service.
 import { getConfig } from "../config";
 
+const KNOWN_EMOTION_LABELS = new Set([
+  "admiration",
+  "amusement",
+  "anger",
+  "annoyance",
+  "approval",
+  "caring",
+  "confusion",
+  "curiosity",
+  "desire",
+  "disappointment",
+  "disapproval",
+  "disgust",
+  "embarrassment",
+  "excitement",
+  "fear",
+  "gratitude",
+  "grief",
+  "joy",
+  "love",
+  "nervousness",
+  "optimism",
+  "pride",
+  "realization",
+  "relief",
+  "remorse",
+  "sadness",
+  "surprise",
+  "neutral"
+]);
+
 // Options that can be supplied when calling the ML API.
 type NooraRequestOptions = {
   userId?: number | string;
@@ -11,7 +42,7 @@ type NooraRequestOptions = {
 // Normalized Noora response payload used by server services.
 export type NooraAIResult = {
   response: string;
-  emotion: string | string[];
+  emotion: string[];
   provider: "Noora";
 };
 
@@ -65,6 +96,34 @@ function extractNooraResponseText(payload: any): string | null {
   }
 
   return null;
+}
+
+// Extracts detected emotion labels from supported ML response shapes.
+function extractEmotionLabels(payload: any): string[] {
+  const candidates = [
+    payload?.emotions,
+    payload?.emotion,
+    payload?.result?.emotions,
+    payload?.result?.emotion,
+    payload?.data?.emotions,
+    payload?.data?.emotion,
+    payload?.output?.emotions,
+    payload?.output?.emotion
+  ];
+
+  for (const candidate of candidates) {
+    const rawLabels = Array.isArray(candidate) ? candidate : typeof candidate === "string" ? candidate.split(",") : [];
+    const labels = rawLabels
+      .map((label) => String(label).trim().toLowerCase())
+      .filter((label) => label && !["unknown", "placeholder", "none", "n/a"].includes(label))
+      .filter((label) => KNOWN_EMOTION_LABELS.has(label));
+
+    if (labels.length > 0) {
+      return labels;
+    }
+  }
+
+  return [];
 }
 
 // Sends one request to the Python ML service.
@@ -121,7 +180,7 @@ async function callNooraProduct(message: string, options?: NooraRequestOptions):
 
     return {
       response: responseText,
-      emotion: parsed?.emotions || "Unknown",
+      emotion: extractEmotionLabels(parsed),
       provider: "Noora"
     };
   } catch (error) {

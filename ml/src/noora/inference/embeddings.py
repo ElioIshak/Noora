@@ -1,49 +1,32 @@
-# BERT embedding generation utilities.
-"""BERT embedding utilities."""
-
 from __future__ import annotations
 
 from functools import lru_cache
 
-import numpy as np
-
-from ..constants import get_settings
+from ..constants import EMBEDDING_MODEL_NAME
 from .encoder import encode
 
-# BERT-family hidden size expected by the Noora classifier.
-EMBEDDING_HIDDEN_SIZE = 768
 
-# Lazily load and cache the embedding backbone model.
 @lru_cache(maxsize=1)
 def load_embedding_model():
-    try:
-        from transformers import TFAutoModel
-    except ImportError:
-        return None
+    import torch
+    from transformers import AutoModel
 
-    settings = get_settings()
+    model = AutoModel.from_pretrained(EMBEDDING_MODEL_NAME)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    model.eval()
+    return model, device
 
-    try:
-        return TFAutoModel.from_pretrained(settings.embedding_model_name)
-    except Exception:
-        return None
 
-# Creates shape-compatible placeholder embeddings for workflow testing.
-def build_placeholder_embeddings(text: str | list[str], max_len: int | None = None):
-    settings = get_settings()
-    sequence_len = max_len or settings.max_sequence_length
-    batch_size = len(text) if isinstance(text, list) else 1
+def get_embeddings(input_text: str | list[str], max_len: int | None = None):
+    import torch
 
-    return np.zeros((batch_size, sequence_len, EMBEDDING_HIDDEN_SIZE), dtype=np.float32)
+    model, device = load_embedding_model()
+    tokens_ids = encode(input_text, max_len=max_len)
+    tokens_ids = {key: value.to(device) for key, value in tokens_ids.items()}
 
-# Generate embeddings for one text or a batch of texts.
-def get_embeddings(text: str | list[str], max_len: int | None = None):
-    model = load_embedding_model()
+    with torch.no_grad():
+        outputs = model(**tokens_ids)
+        last_hidden_state = outputs.last_hidden_state
 
-    if model is None:
-        return build_placeholder_embeddings(text, max_len=max_len)
-
-    encoded = encode(text, max_len=max_len, tensor_type="tf")
-    outputs = model(encoded, training=False)
-
-    return outputs.last_hidden_state.numpy()
+    return last_hidden_state.cpu().numpy()

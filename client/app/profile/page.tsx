@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Header, Footer } from '@/components/layout/header-footer'
 import { PageTransition, AnimatedSection } from '@/components/animated-section'
 import {
   chatAPI,
@@ -295,7 +294,6 @@ export default function ProfilePage() {
   
   return (
     <div className="min-h-screen bg-gradient-hero relative noise-overlay">
-      <Header />
       
       <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <PageTransition>
@@ -592,7 +590,6 @@ export default function ProfilePage() {
         </PageTransition>
       </main>
       
-      <Footer />
     </div>
   )
 }

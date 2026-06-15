@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "../utils/password";
 import { signAuthToken } from "../utils/token";
 
 import {
+  sendPasswordResetEmail,
   sendSignInEmail,
   sendWelcomeEmail
 } from "./notification.service";
@@ -18,15 +19,33 @@ export type PublicUser = {
   createdAt: string;
 }; 
 
-const RESET_TOKEN_HASH_ALGORITHM = process.env.RESET_TOKEN_HASH_ALGORITHM || "sha256";
-const PASSWORD_RESET_TOKEN_BYTES = process.env.PASSWORD_RESET_TOKEN_BYTES ? parseInt(process.env.PASSWORD_RESET_TOKEN_BYTES) : 32;
-const PASSWORD_RESET_TOKEN_TTL_MS = process.env.PASSWORD_RESET_TOKEN_TTL_MS ? parseInt(process.env.PASSWORD_RESET_TOKEN_TTL_MS) : 1000 * 60 * 30;
+const RESET_TOKEN_HASH_ALGORITHM = String(process.env.RESET_TOKEN_HASH_ALGORITHM).trim();
+
+function parsePositiveIntegerEnv(value: string | undefined, fallback: number): number {
+  if (!value?.trim()) {
+    return fallback;
+  }
+
+  const parsed = Number(value.trim());
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const PASSWORD_RESET_TOKEN_BYTES = parsePositiveIntegerEnv(process.env.PASSWORD_RESET_TOKEN_BYTES, 32);
+const PASSWORD_RESET_TOKEN_TTL_MS = parsePositiveIntegerEnv(process.env.PASSWORD_RESET_TOKEN_TTL_MS, 1000 * 60 * 30);
 
 function queueNotificationEmail(label: string, send: () => Promise<unknown>): void {
-  void send().catch((error) => {
-    // eslint-disable-next-line no-console
-    console.error(`Failed to send ${label} email.`, error instanceof Error ? error.message : error);
-  });
+  void send()
+    .then((result) => {
+      const emailResult = result as { sent?: boolean; skippedReason?: string } | undefined;
+      if (emailResult?.sent === false) {
+        // eslint-disable-next-line no-console
+        console.warn(`Skipped ${label} email.`, emailResult.skippedReason ?? "Unknown reason");
+      }
+    })
+    .catch((error) => {
+      // eslint-disable-next-line no-console
+      console.error(`Failed to send ${label} email.`, error instanceof Error ? error.message : error);
+    });
 }
 
 // Creates a SHA-256 hash for a reset token.
@@ -209,10 +228,11 @@ export async function requestPasswordReset(email: string) {
       .execute();
   });
 
+  queueNotificationEmail("password reset", () => sendPasswordResetEmail(toPublicUser(user), resetToken, expiresAt));
+
   return {
     success: true,
-    message: "A reset token has been generated.",
-    resetToken
+    message: "A reset token has been generated and sent to your email."
   };
 }
 

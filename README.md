@@ -53,7 +53,7 @@ Noora/
 - Complex-emotion lookup
 - Prompt construction
 - Gemini response generation
-- Archived training scripts under `ml/archive`
+- Training notebook at `ml/embeddings.ipynb`
 
 Large local ML assets such as datasets, embeddings, and saved models are intentionally ignored by Git.
 
@@ -204,7 +204,7 @@ Database:  Noora
 ```bash
 cd ml
 pip install -r requirements.txt
-python -m noora.api
+python -m noora
 ```
 
 If Python cannot find the `noora` package, set `PYTHONPATH` to `ml/src`.
@@ -214,7 +214,7 @@ PowerShell:
 ```powershell
 cd ml
 $env:PYTHONPATH = "$PWD\src"
-python -m noora.api
+python -m noora
 ```
 
 ### Server

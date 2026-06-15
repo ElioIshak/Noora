@@ -30,7 +30,7 @@ export function getConfig() {
     historyLimit: toNumber(process.env.NOORA_HISTORY_LIMIT, 20),
     titleGeneratorApiKey: process.env.TITLE_GENERATOR_API_KEY,
     weeklySummaryGeminiApiKey: process.env.WEEKLY_SUMMARY_GEMINI_API_KEY?.trim(),
-    weeklySummaryGeminiModel: process.env.WEEKLY_SUMMARY_GEMINI_MODEL?.trim() || "gemini-2.5-flash",
+    weeklySummaryGeminiModel: "gemini-2.5-flash",
     appUrl: process.env.APP_URL?.trim() || process.env.CORS_ORIGIN?.trim() || "http://localhost:3000",
     resendApiKey: process.env.RESEND_API_KEY?.trim() || "",
     resendFromEmail: process.env.RESEND_FROM_EMAIL?.trim() || "",

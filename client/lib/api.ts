@@ -128,7 +128,6 @@ type ServerAuthResponse = {
 type ServerForgotPasswordResponse = {
   success?: boolean;
   message?: string;
-  resetToken?: string;
 };
 
 type ServerChatTurnResponse = {
@@ -225,15 +224,19 @@ function parseEmotionTags(emotion: ServerMessage['emotion']): string[] | undefin
     return undefined;
   }
 
+  const ignoredTags = new Set(['unknown', 'placeholder', 'none', 'n/a']);
+
   if (Array.isArray(emotion)) {
-    const tags = emotion.map((tag) => String(tag).trim()).filter(Boolean);
+    const tags = emotion
+      .map((tag) => String(tag).trim())
+      .filter((tag) => tag && !ignoredTags.has(tag.toLowerCase()));
     return tags.length > 0 ? tags : undefined;
   }
 
   const tags = emotion
     .split(',')
     .map((tag) => tag.trim())
-    .filter(Boolean);
+    .filter((tag) => tag && !ignoredTags.has(tag.toLowerCase()));
 
   return tags.length > 0 ? tags : undefined;
 }
@@ -249,6 +252,35 @@ function mapMessage(raw: ServerMessage, fallbackConversationId: string): Message
     emotionTags: parseEmotionTags(raw.emotion),
     createdAt: toIsoString(raw.created_at),
   };
+}
+
+function attachEmotionTagsToUserMessage(messages: Message[]): Message[] {
+  const mappedMessages = messages.map((message) => ({
+    ...message,
+    emotionTags: message.emotionTags ? [...message.emotionTags] : undefined,
+  }));
+
+  for (let index = 0; index < mappedMessages.length; index += 1) {
+    const message = mappedMessages[index];
+
+    if (message.role === 'assistant' && message.emotionTags && message.emotionTags.length > 0) {
+      for (let previous = index - 1; previous >= 0; previous -= 1) {
+        if (mappedMessages[previous].role === 'user') {
+          mappedMessages[previous] = {
+            ...mappedMessages[previous],
+            emotionTags: message.emotionTags,
+          };
+          mappedMessages[index] = {
+            ...message,
+            emotionTags: undefined,
+          };
+          break;
+        }
+      }
+    }
+  }
+
+  return mappedMessages;
 }
 
 function mapExportMessage(raw: ServerMessage): UserDataExportMessage {
@@ -388,15 +420,14 @@ export const authAPI = {
     });
   },
 
-  forgotPassword: async (email: string): Promise<{ message: string; resetToken?: string }> => {
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
     const result = await fetchAPI<ServerForgotPasswordResponse>('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
 
     return {
-      message: result.message ?? 'If an account exists for this email, a reset token has been generated.',
-      resetToken: result.resetToken,
+      message: result.message ?? 'If an account exists for this email, a reset token has been sent.',
     };
   },
 
@@ -440,7 +471,9 @@ export const chatAPI = {
       : Array.isArray(result.chat)
         ? result.chat
         : [];
-    const messages = rawMessages.map((rawMessage) => mapMessage(rawMessage, conversation.id));
+    const messages = attachEmotionTagsToUserMessage(
+      rawMessages.map((rawMessage) => mapMessage(rawMessage, conversation.id))
+    );
     const assistantMessage = [...messages].reverse().find((entry) => entry.role === 'assistant');
 
     return {
@@ -493,7 +526,9 @@ export const chatAPI = {
       : Array.isArray(result.chat)
         ? result.chat
         : [];
-    const mappedMessages = rawMessages.map((rawMessage) => mapMessage(rawMessage, conversation.id));
+    const mappedMessages = attachEmotionTagsToUserMessage(
+      rawMessages.map((rawMessage) => mapMessage(rawMessage, conversation.id))
+    );
     const latestMessage = mappedMessages[mappedMessages.length - 1];
 
     return {
