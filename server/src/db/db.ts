@@ -9,7 +9,10 @@ const config = getConfig();
 
 // Shared pg pool for all DB operations.
 export const pool = new Pool({
-  connectionString: config.databaseUrl
+  connectionString: config.databaseUrl,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Shared Kysely instance for typed SQL operations.
