@@ -45,7 +45,11 @@ Thumbs.db
 
 # Local ML artifacts and datasets
 ml/data/
-ml/saved_models/
+ml/saved_models/Noora_v2.h5
+ml/saved_models/Noora_v3.h5
+ml/saved_models/Noora_v4.keras
+ml/saved_models/Noora_v5.keras
+ml/saved_models/Noora_v7.keras
 ml/archive/
 *.h5
 *.keras
